@@ -302,9 +302,162 @@
     #connectBtn { flex-basis: 100%; }
   }
 
+
+  /* ============================================================
+     PC: scoreboard layout, 1024px and wider only.
+     Phones and tablets keep the card layout above, untouched.
+
+     In the game every eye is on the number, so on a large screen the
+     number owns the stage: the screen fills most of the window, the
+     controls sit large beneath it, and the operator's Arduino controls
+     shrink into a footer strip.
+
+     The glass card dissolves into the page (display: contents), so its
+     children can be placed on one page grid without changing the markup.
+     ============================================================ */
+  @media (min-width: 1024px) {
+    body {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+      grid-template-areas:
+        "brand    label    .       "
+        "screen   screen   screen  "
+        "controls controls controls"
+        "arduino  note     tagline ";
+      align-items: center;
+      gap: 24px 32px;
+      height: 100vh;
+      height: 100dvh;
+      padding: 24px 48px 22px;
+      overflow: hidden;
+    }
+    body::before { width: min(78vw, 110vh); opacity: .16; }
+
+    .device {
+      display: contents;
+    }
+
+    /* ---- Top bar: logo left, the label centred, like the site's navbar */
+    .brand {
+      grid-area: brand;
+      flex-direction: row;
+      justify-self: start;
+      gap: 16px;
+    }
+    .brand img { height: 42px; }
+    /* Beside the logo the name reads as one line with no rules; below 1280px
+       the column is narrower than logo plus name, and the lockup already
+       says IEEE UOB Student Branch, so the text steps aside. */
+    .brand .eyebrow { white-space: nowrap; }
+    .brand .eyebrow::before, .brand .eyebrow::after { content: none; }
+    .label { grid-area: label; margin: 0; font-size: 13px; }
+
+    /* ---- The screen: most of the window ---- */
+    .screen {
+      grid-area: screen;
+      align-self: stretch;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+      padding: 24px;
+      border-radius: 24px;
+      border-color: var(--glass-edge-2);
+      box-shadow:
+        inset 0 2px 24px rgba(0, 0, 0, 0.35),
+        0 30px 80px rgba(4, 12, 26, 0.35);
+    }
+    .screen::before {
+      inset: 0;
+      height: auto;
+      background: radial-gradient(45% 55% at 50% 50%, rgba(16, 133, 228, 0.30) 0%, transparent 72%);
+    }
+    /* The number scales with whichever runs out first, width or height, so
+       it fills the screen on a wide monitor and a short laptop alike. */
+    .digits {
+      font-size: min(17vw, 38vh);
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+    /* The decimals are the score in this game: near full size and full
+       brightness, not the dimmed afterthought a normal stopwatch uses. */
+    .digits .ms { font-size: 0.8em; opacity: 1; }
+    .units { margin-top: 2vh; font-size: 14px; letter-spacing: 0.22em; }
+
+    /* ---- Controls: large, centred under the screen ---- */
+    .controls {
+      grid-area: controls;
+      justify-self: center;
+      width: min(620px, 100%);
+      margin: 0;
+      gap: 16px;
+    }
+    .controls button { min-height: 64px; font-size: 18px; }
+
+    /* ---- Footer strip: the operator's controls, kept small ---- */
+    .arduino {
+      grid-area: arduino;
+      justify-self: start;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+    #connectBtn { flex: none; min-height: 40px; padding: 8px 18px; font-size: 13px; }
+    .note {
+      grid-area: note;
+      margin: 0;
+      max-width: 520px;
+      text-align: center;
+      font-size: 12px;
+    }
+    .tagline { grid-area: tagline; justify-self: end; }
+
+    /* Once the Arduino is connected the setup note has done its job. */
+    body:has(.dot.on) .note { visibility: hidden; }
+
+    /* ---- The screen reacts to the game ----
+       While the timer runs, a slow glow breathes around the screen's edge.
+       The moment it stops, the digits flash bright once: the buzzer press
+       is the climax of every round, and it should land visually. */
+    .screen::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      border: 2px solid var(--neon-core);
+      box-shadow: 0 0 28px rgba(16, 133, 228, 0.65), inset 0 0 28px rgba(16, 133, 228, 0.35);
+      opacity: 0;
+      pointer-events: none;
+    }
+    body:has(#toggleBtn.stop) .screen::after {
+      animation: runPulse 1400ms ease-in-out infinite;
+    }
+    body:has(#toggleBtn.go) .digits {
+      animation: lockFlash 900ms ease-out;
+    }
+  }
+
+  @media (min-width: 1024px) and (max-width: 1279px) {
+    .brand .eyebrow { display: none; }
+  }
+
+  @keyframes runPulse {
+    0%, 100% { opacity: 0.35; }
+    50%      { opacity: 1; }
+  }
+  @keyframes lockFlash {
+    0%   { text-shadow: 0 0 14px #fff, 0 0 40px var(--neon-core), 0 0 90px var(--neon-glow); }
+    100% { text-shadow: 0 0 6px var(--neon-core), 0 0 18px var(--neon-glow), 0 0 36px rgba(16, 133, 228, 0.55); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     button, .dot { transition: none; }
     button:active:not(:disabled) { transform: none; }
+    /* No breathing or flash: the ring simply shows while the timer runs. */
+    body:has(#toggleBtn.stop) .screen::after { animation: none; opacity: 1; }
+    body:has(#toggleBtn.go) .digits { animation: none; }
   }
 </style>
 </head>
@@ -318,7 +471,7 @@
     <p class="label">Timer</p>
     <div class="screen">
       <div class="digits" id="display">00<span class="ms">.00</span></div>
-      <div class="units">seconds . hundredths</div>
+      <div class="units">seconds &middot; hundredths</div>
     </div>
     <div class="controls">
       <button id="toggleBtn" class="go">Start</button>
